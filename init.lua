@@ -88,13 +88,7 @@ require("lazy").setup({
         },
         renderer = {
           group_empty = true,
-          root_folder_label = function(path)
-            local name = vim.fn.fnamemodify(path, ":t")
-            if name == "" then
-              name = path
-            end
-            return "📁 " .. name
-          end,
+          root_folder_label = false,
         },
         filters = {
           dotfiles = false,
@@ -374,6 +368,7 @@ function _G.custom_tabline()
 end
 
 vim.opt.tabline = "%!v:lua.custom_tabline()"
+vim.opt.showtabline = 2
 
 local fzf = require("fzf-lua")
 vim.keymap.set("n", "<leader>ff", fzf.files)
