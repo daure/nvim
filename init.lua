@@ -88,6 +88,13 @@ require("lazy").setup({
         },
         renderer = {
           group_empty = true,
+          root_folder_label = function(path)
+            local name = vim.fn.fnamemodify(path, ":t")
+            if name == "" then
+              name = path
+            end
+            return "📁 " .. name
+          end,
         },
         filters = {
           dotfiles = false,
@@ -105,6 +112,13 @@ require("lazy").setup({
           api.config.mappings.default_on_attach(bufnr)
           vim.keymap.set("n", "<S-h>", ":tabprev<CR>", { buffer = bufnr, nowait = true })
           vim.keymap.set("n", "<S-l>", ":tabnext<CR>", { buffer = bufnr, nowait = true })
+
+          local function smart_open()
+            local node = api.tree.get_node_under_cursor()
+            if node and node.parent == nil then return end
+            api.node.open.edit()
+          end
+          vim.keymap.set("n", "<CR>", smart_open, { buffer = bufnr, noremap = true, silent = true, nowait = true })
         end,
       })
     end,
@@ -127,8 +141,11 @@ require("lazy").setup({
             ["<C-d>"] = "preview-page-down",
           },
         },
-        files = {
-          fzf_opts = { ["--scheme"] = "path" },
+       files = {
+         fzf_opts = { ["--scheme"] = "path" },
+       },
+        buffers = {
+          no_term_buffers = true,
         },
       })
     end,
@@ -190,8 +207,38 @@ require("lazy").setup({
     },
     config = function()
       require("mason-lspconfig").setup({
-        ensure_installed = { "lua_ls", "pyright", "ts_ls", "angularls", "html", "cssls", "tailwindcss" },
+        ensure_installed = { "lua_ls", "pyright", "ts_ls", "angularls", "html", "cssls", "tailwindcss", "vue_ls" },
       })
+
+      -- Volar v3: wire ts_ls as the TypeScript backend for vue_ls
+      local vue_ls_path = vim.fn.stdpath("data") .. "/mason/packages/vue-language-server/node_modules/@vue/language-server"
+      local vue_plugin = {
+        name = "@vue/typescript-plugin",
+        location = vue_ls_path,
+        languages = { "vue" },
+        configNamespace = "typescript",
+      }
+      vim.lsp.config("ts_ls", {
+        init_options = { plugins = { vue_plugin } },
+        filetypes = { "typescript", "javascript", "javascriptreact", "typescriptreact", "vue" },
+      })
+      vim.lsp.config("vue_ls", {
+        on_init = function(client)
+          client.handlers["tsserver/request"] = function(_, result, context)
+            local clients = vim.lsp.get_clients({ bufnr = context.bufnr, name = "ts_ls" })
+            if #clients == 0 then return end
+            local id, command, payload = unpack(unpack(result))
+            clients[1]:exec_cmd(
+              { title = "vue_ls_forward", command = "typescript.tsserverRequest", arguments = { command, payload } },
+              { bufnr = context.bufnr },
+              function(_, r)
+                client:notify("tsserver/response", { { id, r and r.body } })
+              end
+            )
+          end
+        end,
+      })
+
       vim.lsp.enable("lua_ls")
       vim.lsp.enable("pyright")
       vim.lsp.enable("ts_ls")
@@ -199,6 +246,7 @@ require("lazy").setup({
       vim.lsp.enable("html")
       vim.lsp.enable("cssls")
       vim.lsp.enable("tailwindcss")
+      vim.lsp.enable("vue_ls")
     end,
   },
 
@@ -299,13 +347,20 @@ function _G.custom_tabline()
     s = s .. (i == vim.fn.tabpagenr() and "%#TabLineSel#" or "%#TabLine#")
 
     local name
-    if bufname:match("term://") then
+    if i == 1 then
+      local tab_cwd = vim.fn.getcwd(-1, i)
+      name = vim.fn.fnamemodify(tab_cwd, ":t")
+      if name == "" then
+        name = tab_cwd
+      end
+      name = "📁 " .. name
+    elseif bufname:match("term://") then
       name = bufname:match("//[^:]+:(.+)$") or "terminal"
       name = name:match("([^/\\]+)$") or name
       name = name:gsub("%.exe$", ""):gsub("%.cmd$", "")
-      if name:lower():match("opencode") then name = "OpenCode"
-      elseif name:lower():match("lazygit") then name = "LazyGit"
-      elseif name:lower():match("pwsh") or name:lower():match("powershell") then name = "PowerShell"
+      if name:lower():match("opencode") then name = "󱙺 OpenCode"
+      elseif name:lower():match("lazygit") then name = " LazyGit"
+      elseif name:lower():match("pwsh") or name:lower():match("powershell") then name = " PowerShell"
       end
     elseif bufname == "" then
       name = "new"
@@ -344,8 +399,29 @@ vim.keymap.set("n", "<leader>ca", vim.lsp.buf.code_action)
 vim.keymap.set("n", "<leader>e", ":NvimTreeToggle<CR>")
 vim.keymap.set("n", "<M-l>", ":NvimTreeFindFile<CR>")
 
+local function close_current_tab()
+  local tab = vim.api.nvim_get_current_tabpage()
+  local term_bufs = {}
+
+  for _, win in ipairs(vim.api.nvim_tabpage_list_wins(tab)) do
+    local bufnr = vim.api.nvim_win_get_buf(win)
+    if vim.bo[bufnr].buftype == "terminal" then
+      term_bufs[bufnr] = true
+    end
+  end
+
+  vim.cmd("tabclose!")
+
+  for bufnr, _ in pairs(term_bufs) do
+    if vim.api.nvim_buf_is_valid(bufnr) then
+      pcall(vim.api.nvim_buf_delete, bufnr, { force = true })
+    end
+  end
+end
+
 vim.keymap.set("n", "<leader>tn", ":tabnew<CR>")
-vim.keymap.set("n", "<leader>tc", ":tabclose!<CR>")
+vim.keymap.set({"n", "t"}, "<leader>tc", close_current_tab)
+vim.keymap.set({"n", "t"}, "<C-F4>", close_current_tab)
 vim.keymap.set("n", "<leader>to", ":tabonly<CR>")
 vim.keymap.set("n", "<S-l>", ":tabnext<CR>")
 vim.keymap.set("n", "<S-h>", ":tabprev<CR>")
@@ -353,6 +429,7 @@ for i = 1, 9 do
   vim.keymap.set("n", "<M-" .. i .. ">", i .. "gt")
 end
 vim.keymap.set({"n", "i", "t", "v"}, "<F4>", "<CR>")
+vim.keymap.set("n", "<Esc>", "<cmd>nohlsearch<CR><Esc>", { silent = true, desc = "Clear search highlight" })
 
 vim.keymap.set("n", "<C-h>", "<C-w>h")
 vim.keymap.set("n", "<C-l>", "<C-w>l")
@@ -379,8 +456,30 @@ end
 vim.keymap.set({"n", "t"}, "<M-S-t>", function()
   vim.cmd("tabnew | terminal")
 end)
+vim.keymap.set({"n", "t"}, "<M-S-o>", function()
+  vim.cmd("tabnew | terminal opencode")
+end)
 vim.keymap.set({"n", "t"}, "<M-o>", function()
-  find_or_open_terminal("opencode", "opencode")
+  local current = vim.fn.tabpagenr()
+  local oc_tabs = {}
+  for i = 1, vim.fn.tabpagenr("$") do
+    local bufnr = vim.fn.tabpagebuflist(i)[vim.fn.tabpagewinnr(i)]
+    local bufname = vim.fn.bufname(bufnr)
+    if bufname:match("term://") and bufname:lower():match("opencode") then
+      table.insert(oc_tabs, i)
+    end
+  end
+  if #oc_tabs == 0 then
+    vim.cmd("tabnew | terminal opencode")
+    return
+  end
+  for _, i in ipairs(oc_tabs) do
+    if i > current then
+      vim.cmd(i .. "tabnext")
+      return
+    end
+  end
+  vim.cmd(oc_tabs[1] .. "tabnext")
 end)
 vim.keymap.set({"n", "t"}, "<M-g>", function()
   find_or_open_terminal("lazygit", "lazygit")
