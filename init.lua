@@ -1,0 +1,433 @@
+vim.g.mapleader = " "
+vim.opt.shell = "pwsh"
+vim.opt.shellcmdflag = "-NoLogo -NoProfile -ExecutionPolicy RemoteSigned -Command"
+vim.opt.shellquote = ""
+vim.opt.shellxquote = ""
+
+-- Basic settings
+vim.opt.number = true
+vim.opt.relativenumber = true
+vim.opt.mouse = "a"
+vim.opt.clipboard = "unnamedplus"
+vim.opt.tabstop = 2
+vim.opt.shiftwidth = 2
+vim.opt.expandtab = true
+vim.opt.smartindent = true
+vim.opt.termguicolors = true
+vim.opt.fileformats = "unix,dos"
+vim.opt.sessionoptions = "buffers,curdir,folds,help,tabpages,winsize"
+
+vim.lsp.config.cssls = {
+  settings = {
+    css = { lint = { unknownAtRules = "ignore" } },
+    scss = { lint = { unknownAtRules = "ignore" } },
+    less = { lint = { unknownAtRules = "ignore" } },
+  },
+}
+
+-- Neovide
+vim.g.neovide_fullscreen = true
+vim.g.neovide_cursor_animation_length = 0
+vim.g.neovide_scroll_animation_length = 0.1
+vim.o.guifont = "JetBrainsMono NF:h14"
+
+-- Bootstrap lazy.nvim
+local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
+if not vim.uv.fs_stat(lazypath) then
+  vim.fn.system({
+    "git",
+    "clone",
+    "--filter=blob:none",
+    "https://github.com/folke/lazy.nvim.git",
+    "--branch=stable",
+    lazypath,
+  })
+end
+vim.opt.rtp:prepend(lazypath)
+
+require("lazy").setup({
+  {
+    "folke/tokyonight.nvim",
+    lazy = false,
+    priority = 1000,
+  },
+
+  {
+    "nvim-tree/nvim-web-devicons",
+  },
+
+  {
+    "nvim-lualine/lualine.nvim",
+    dependencies = { "nvim-tree/nvim-web-devicons" },
+    config = function()
+      require("lualine").setup({
+        options = {
+          theme = "tokyonight",
+        },
+        sections = {
+          lualine_a = { "mode" },
+          lualine_b = { "branch", "diff", "diagnostics" },
+          lualine_c = { "filename" },
+          lualine_x = { "encoding", "fileformat", "filetype" },
+          lualine_y = { "progress" },
+          lualine_z = { "location" },
+        },
+      })
+    end,
+  },
+
+  {
+    "nvim-tree/nvim-tree.lua",
+    dependencies = { "nvim-tree/nvim-web-devicons" },
+    config = function()
+      require("nvim-tree").setup({
+        view = {
+          width = 35,
+          side = "left",
+          preserve_window_proportions = true,
+        },
+        renderer = {
+          group_empty = true,
+        },
+        filters = {
+          dotfiles = false,
+        },
+        update_focused_file = {
+          enable = true,
+        },
+        git = {
+          enable = true,
+          ignore = false,
+          timeout = 400,
+        },
+        on_attach = function(bufnr)
+          local api = require("nvim-tree.api")
+          api.config.mappings.default_on_attach(bufnr)
+          vim.keymap.set("n", "<S-h>", ":tabprev<CR>", { buffer = bufnr, nowait = true })
+          vim.keymap.set("n", "<S-l>", ":tabnext<CR>", { buffer = bufnr, nowait = true })
+        end,
+      })
+    end,
+  },
+
+  {
+    "ibhagwan/fzf-lua",
+    dependencies = { "nvim-tree/nvim-web-devicons" },
+    config = function()
+      require("fzf-lua").setup({
+        winopts = {
+          preview = {
+            layout = "vertical",
+            vertical = "down:50%",
+          },
+        },
+        keymap = {
+          builtin = {
+            ["<C-u>"] = "preview-page-up",
+            ["<C-d>"] = "preview-page-down",
+          },
+        },
+        files = {
+          fzf_opts = { ["--scheme"] = "path" },
+        },
+      })
+    end,
+  },
+
+  {
+    "rmagatti/auto-session",
+    enabled = false,
+    config = function()
+      require("auto-session").setup({
+        suppressed_dirs = { "~/", "~/Downloads", "/" },
+        pre_save_cmds = { "NvimTreeClose" },
+        post_restore_cmds = { "NvimTreeOpen" },
+      })
+    end,
+  },
+
+  {
+    'nvim-treesitter/nvim-treesitter',
+    lazy = false,
+    build = ':TSUpdate'
+  },
+
+  {
+    "lewis6991/gitsigns.nvim",
+    config = function()
+      require("gitsigns").setup({
+        on_attach = function(bufnr)
+          local gs = require("gitsigns")
+          vim.keymap.set("n", "<leader>gp", gs.preview_hunk, { buffer = bufnr })
+          vim.keymap.set("n", "]c", gs.next_hunk, { buffer = bufnr })
+          vim.keymap.set("n", "[c", gs.prev_hunk, { buffer = bufnr })
+        end,
+      })
+    end,
+  },
+
+  {
+    "williamboman/mason.nvim",
+    config = function()
+      require("mason").setup({
+        ensure_installed = { "prettier" },
+      })
+    end,
+  },
+
+  {
+    "williamboman/mason-lspconfig.nvim",
+    dependencies = {
+      "williamboman/mason.nvim",
+    },
+  },
+
+  {
+    "neovim/nvim-lspconfig",
+    dependencies = {
+      "williamboman/mason.nvim",
+      "williamboman/mason-lspconfig.nvim",
+    },
+    config = function()
+      require("mason-lspconfig").setup({
+        ensure_installed = { "lua_ls", "pyright", "ts_ls", "angularls", "html", "cssls", "tailwindcss" },
+      })
+      vim.lsp.enable("lua_ls")
+      vim.lsp.enable("pyright")
+      vim.lsp.enable("ts_ls")
+      vim.lsp.enable("angularls")
+      vim.lsp.enable("html")
+      vim.lsp.enable("cssls")
+      vim.lsp.enable("tailwindcss")
+    end,
+  },
+
+  {
+    "hrsh7th/nvim-cmp",
+    dependencies = {
+      "hrsh7th/cmp-nvim-lsp",
+      "hrsh7th/cmp-buffer",
+      "hrsh7th/cmp-path",
+      "L3MON4D3/LuaSnip",
+    },
+    config = function()
+      local cmp = require("cmp")
+      cmp.setup({
+        mapping = cmp.mapping.preset.insert({
+          ["<C-Space>"] = cmp.mapping.complete(),
+          ["<CR>"] = cmp.mapping.confirm({ select = true }),
+          ["<Tab>"] = cmp.mapping.select_next_item(),
+          ["<S-Tab>"] = cmp.mapping.select_prev_item(),
+        }),
+        sources = {
+          { name = "nvim_lsp" },
+          { name = "buffer" },
+          { name = "path" },
+        },
+      })
+    end,
+  },
+
+  {
+    "stevearc/conform.nvim",
+    config = function()
+      require("conform").setup({
+        formatters_by_ft = {
+          javascript = { "prettier" },
+          typescript = { "prettier" },
+          javascriptreact = { "prettier" },
+          typescriptreact = { "prettier" },
+          html = { "prettier" },
+          htmlangular = { "prettier" },
+          css = { "prettier" },
+          scss = { "prettier" },
+          json = { "prettier" },
+          markdown = { "prettier" },
+        },
+        format_on_save = function(bufnr)
+          -- use project prettier if available, fall back to Mason's
+          local project_prettier = vim.fn.findfile("node_modules/.bin/prettier", vim.fn.getcwd() .. ";")
+          if project_prettier ~= "" or vim.fn.executable("prettier") == 1 then
+            return { timeout_ms = 2000, lsp_fallback = false }
+          end
+        end,
+      })
+    end,
+  },
+
+  {
+    "folke/which-key.nvim",
+    event = "VeryLazy",
+    config = function()
+      require("which-key").setup()
+    end,
+  },
+
+  {
+    "sindrets/diffview.nvim",
+    dependencies = { "nvim-lua/plenary.nvim" },
+    config = function()
+      require("diffview").setup()
+    end,
+  },
+
+  {
+    "iamcco/markdown-preview.nvim",
+    cmd = { "MarkdownPreview", "MarkdownPreviewStop", "MarkdownPreviewToggle" },
+    ft = { "markdown" },
+    build = "cd app && npm install",
+  },
+})
+
+vim.cmd.colorscheme("tokyonight")
+
+vim.api.nvim_create_autocmd("VimEnter", {
+  callback = function()
+    require("nvim-tree.api").tree.open()
+  end,
+})
+
+function _G.custom_tabline()
+  local s = ""
+  for i = 1, vim.fn.tabpagenr("$") do
+    local winnr = vim.fn.tabpagewinnr(i)
+    local bufnr = vim.fn.tabpagebuflist(i)[winnr]
+    local bufname = vim.fn.bufname(bufnr)
+    local modified = vim.fn.getbufvar(bufnr, "&mod") == 1
+
+    s = s .. "%" .. i .. "T"
+    s = s .. (i == vim.fn.tabpagenr() and "%#TabLineSel#" or "%#TabLine#")
+
+    local name
+    if bufname:match("term://") then
+      name = bufname:match("//[^:]+:(.+)$") or "terminal"
+      name = name:match("([^/\\]+)$") or name
+      name = name:gsub("%.exe$", ""):gsub("%.cmd$", "")
+      if name:lower():match("opencode") then name = "OpenCode"
+      elseif name:lower():match("lazygit") then name = "LazyGit"
+      elseif name:lower():match("pwsh") or name:lower():match("powershell") then name = "PowerShell"
+      end
+    elseif bufname == "" then
+      name = "new"
+    else
+      name = vim.fn.fnamemodify(bufname, ":t")
+    end
+
+    s = s .. " " .. (modified and "● " or "") .. name .. " "
+  end
+  return s .. "%#TabLineFill#%T"
+end
+
+vim.opt.tabline = "%!v:lua.custom_tabline()"
+
+local fzf = require("fzf-lua")
+vim.keymap.set("n", "<leader>ff", fzf.files)
+vim.keymap.set("n", "<leader>fg", fzf.live_grep)
+vim.keymap.set("n", "<leader>fb", fzf.buffers)
+vim.keymap.set("n", "<C-e>", fzf.buffers)
+vim.keymap.set("n", "<leader>fh", fzf.help_tags)
+vim.keymap.set("n", "<leader>gs", fzf.git_status)
+vim.keymap.set("n", "<leader>gb", fzf.git_branches)
+vim.keymap.set("n", "<leader>dv", ":DiffviewOpen<CR>")
+vim.keymap.set("n", "<leader>dh", ":DiffviewFileHistory %<CR>")
+vim.keymap.set("n", "<leader>mp", ":MarkdownPreviewToggle<CR>")
+
+vim.keymap.set("n", "gd", vim.lsp.buf.definition)
+vim.keymap.set("n", "<C-b>", vim.lsp.buf.definition)
+vim.keymap.set("n", "gr", fzf.lsp_references)
+vim.keymap.set("n", "<M-F7>", fzf.lsp_references)
+vim.keymap.set("n", "gi", vim.lsp.buf.implementation)
+vim.keymap.set("n", "<C-M-b>", vim.lsp.buf.implementation)
+vim.keymap.set("n", "K", vim.lsp.buf.hover)
+vim.keymap.set("n", "<leader>rn", vim.lsp.buf.rename)
+vim.keymap.set("n", "<leader>ca", vim.lsp.buf.code_action)
+vim.keymap.set("n", "<leader>e", ":NvimTreeToggle<CR>")
+vim.keymap.set("n", "<M-l>", ":NvimTreeFindFile<CR>")
+
+vim.keymap.set("n", "<leader>tn", ":tabnew<CR>")
+vim.keymap.set("n", "<leader>tc", ":tabclose!<CR>")
+vim.keymap.set("n", "<leader>to", ":tabonly<CR>")
+vim.keymap.set("n", "<S-l>", ":tabnext<CR>")
+vim.keymap.set("n", "<S-h>", ":tabprev<CR>")
+for i = 1, 9 do
+  vim.keymap.set("n", "<M-" .. i .. ">", i .. "gt")
+end
+vim.keymap.set({"n", "i", "t", "v"}, "<F4>", "<CR>")
+
+vim.keymap.set("n", "<C-h>", "<C-w>h")
+vim.keymap.set("n", "<C-l>", "<C-w>l")
+vim.keymap.set("n", "<C-j>", "<C-w>j")
+vim.keymap.set("n", "<C-k>", "<C-w>k")
+vim.keymap.set("t", "<C-q>", "<C-\\><C-n>")
+vim.keymap.set("t", "<C-h>", "<C-\\><C-n><C-w>h")
+vim.keymap.set("t", "<C-l>", "<C-\\><C-n><C-w>l")
+vim.keymap.set("t", "<C-j>", "<C-\\><C-n><C-w>j")
+vim.keymap.set("t", "<C-k>", "<C-\\><C-n><C-w>k")
+local function find_or_open_terminal(cmd, name)
+  for i = 1, vim.fn.tabpagenr("$") do
+    local winnr = vim.fn.tabpagewinnr(i)
+    local bufnr = vim.fn.tabpagebuflist(i)[winnr]
+    local bufname = vim.fn.bufname(bufnr)
+    if bufname:match("term://") and bufname:lower():match(cmd:lower()) then
+      vim.cmd(i .. "tabnext")
+      return
+    end
+  end
+  vim.cmd("tabnew | terminal " .. cmd)
+end
+
+vim.keymap.set({"n", "t"}, "<M-F12>", function()
+  vim.cmd("tabnew | terminal")
+end)
+vim.keymap.set({"n", "t"}, "<M-F11>", function()
+  find_or_open_terminal("lazygit", "lazygit")
+end)
+vim.keymap.set({"n", "t"}, "<M-F10>", function()
+  find_or_open_terminal("opencode", "opencode")
+end)
+vim.keymap.set({"n", "t"}, "<M-o>", function()
+  find_or_open_terminal("opencode", "opencode")
+end)
+vim.keymap.set({"n", "t"}, "<M-g>", function()
+  find_or_open_terminal("lazygit", "lazygit")
+end)
+vim.keymap.set({"n", "t"}, "<M-t>", function()
+  -- collect all terminal tabs that are powershell (no specific command)
+  local current = vim.fn.tabpagenr()
+  local ps_tabs = {}
+  for i = 1, vim.fn.tabpagenr("$") do
+    local bufnr = vim.fn.tabpagebuflist(i)[vim.fn.tabpagewinnr(i)]
+    local bufname = vim.fn.bufname(bufnr)
+    if bufname:match("term://") and
+       not bufname:lower():match("opencode") and
+       not bufname:lower():match("lazygit") then
+      table.insert(ps_tabs, i)
+    end
+  end
+  if #ps_tabs == 0 then
+    vim.cmd("tabnew | terminal")
+    return
+  end
+  -- find next ps tab after current
+  for _, i in ipairs(ps_tabs) do
+    if i > current then
+      vim.cmd(i .. "tabnext")
+      return
+    end
+  end
+  -- wrap to first
+  vim.cmd(ps_tabs[1] .. "tabnext")
+end)
+
+vim.diagnostic.config({
+  virtual_text = true,
+  signs = true,
+  underline = true,
+  update_in_insert = false,
+  severity_sort = true,
+})
+
+vim.api.nvim_create_autocmd("FocusLost", {
+  pattern = "*",
+  command = "silent! wa",
+})
