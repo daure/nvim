@@ -421,7 +421,7 @@ end
 vim.keymap.set("n", "<leader>tn", ":tabnew<CR>")
 vim.keymap.set({"n", "t"}, "<leader>tc", close_current_tab)
 vim.keymap.set({"n", "t"}, "<C-F4>", close_current_tab)
-vim.keymap.set({"n", "t"}, "<C-q>", "<cmd>wqa!<CR>")
+vim.keymap.set({"n", "t"}, "<C-M-q>", "<cmd>wqa!<CR>")
 vim.keymap.set({"n", "t"}, "<M-q>", close_current_tab)
 vim.keymap.set("n", "<leader>to", ":tabonly<CR>")
 vim.keymap.set("n", "<S-l>", ":tabnext<CR>")
