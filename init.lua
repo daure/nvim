@@ -16,6 +16,9 @@ vim.opt.smartindent = true
 vim.opt.termguicolors = true
 vim.opt.fileformats = "unix,dos"
 vim.opt.sessionoptions = "buffers,curdir,folds,help,tabpages,winsize"
+vim.opt.colorcolumn = ""
+vim.opt.laststatus = 3
+vim.opt.fillchars:append({ eob = " ", vert = " " })
 
 vim.lsp.config.cssls = {
   settings = {
@@ -319,6 +322,7 @@ require("lazy").setup({
     ft = { "markdown" },
     build = "cd app && npm install",
   },
+
 })
 
 vim.cmd.colorscheme("tokyonight")
@@ -420,9 +424,10 @@ vim.keymap.set({"n", "t"}, "<C-F4>", close_current_tab)
 vim.keymap.set("n", "<leader>to", ":tabonly<CR>")
 vim.keymap.set("n", "<S-l>", ":tabnext<CR>")
 vim.keymap.set("n", "<S-h>", ":tabprev<CR>")
-for i = 1, 9 do
-  vim.keymap.set("n", "<M-" .. i .. ">", i .. "gt")
-end
+vim.keymap.set({ "n", "t" }, "<M-c>", function()
+  vim.cmd("tabnext 1")
+end)
+
 vim.keymap.set({"n", "i", "t", "v"}, "<F4>", "<CR>")
 vim.keymap.set("n", "<Esc>", "<cmd>nohlsearch<CR><Esc>", { silent = true, desc = "Clear search highlight" })
 
