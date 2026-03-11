@@ -170,9 +170,13 @@ require("lazy").setup({
     "lewis6991/gitsigns.nvim",
     config = function()
       require("gitsigns").setup({
+        current_line_blame_opts = {
+          delay = 0,
+        },
         on_attach = function(bufnr)
           local gs = require("gitsigns")
           vim.keymap.set("n", "<leader>gp", gs.preview_hunk, { buffer = bufnr })
+          vim.keymap.set("n", "<leader>gt", gs.toggle_current_line_blame, { buffer = bufnr })
           vim.keymap.set("n", "]c", gs.next_hunk, { buffer = bufnr })
           vim.keymap.set("n", "[c", gs.prev_hunk, { buffer = bufnr })
         end,
@@ -381,7 +385,17 @@ vim.keymap.set("n", "<leader>fb", fzf.buffers)
 vim.keymap.set("n", "<C-e>", fzf.buffers)
 vim.keymap.set("n", "<leader>fh", fzf.help_tags)
 vim.keymap.set("n", "<leader>gs", fzf.git_status)
-vim.keymap.set("n", "<leader>gb", fzf.git_branches)
+vim.keymap.set("n", "<leader>gb", function()
+  for _, win in ipairs(vim.api.nvim_list_wins()) do
+    local buf = vim.api.nvim_win_get_buf(win)
+    if vim.bo[buf].filetype == "gitsigns-blame" then
+      vim.api.nvim_win_close(win, true)
+      return
+    end
+  end
+  require("gitsigns").blame()
+end)
+
 vim.keymap.set("n", "<leader>dv", ":DiffviewOpen<CR>")
 vim.keymap.set("n", "<leader>dh", ":DiffviewFileHistory %<CR>")
 vim.keymap.set("n", "<leader>mp", ":MarkdownPreviewToggle<CR>")
