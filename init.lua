@@ -252,16 +252,40 @@ require("lazy").setup({
   },
 
   {
+    "nvimdev/lspsaga.nvim",
+    event = "LspAttach",
+    dependencies = {
+      "nvim-treesitter/nvim-treesitter",
+      "nvim-tree/nvim-web-devicons",
+    },
+    config = function()
+      require("lspsaga").setup({
+        lightbulb = {
+          enable = false,
+        },
+      })
+    end,
+  },
+
+  {
     "hrsh7th/nvim-cmp",
     dependencies = {
       "hrsh7th/cmp-nvim-lsp",
       "hrsh7th/cmp-buffer",
       "hrsh7th/cmp-path",
       "L3MON4D3/LuaSnip",
+      "onsails/lspkind.nvim",
     },
     config = function()
       local cmp = require("cmp")
       cmp.setup({
+        formatting = {
+          format = require("lspkind").cmp_format({
+            mode = "symbol_text",
+            maxwidth = 50,
+            ellipsis_char = "...",
+          }),
+        },
         mapping = cmp.mapping.preset.insert({
           ["<C-Space>"] = cmp.mapping.complete(),
           ["<CR>"] = cmp.mapping.confirm({ select = true }),
@@ -310,6 +334,12 @@ require("lazy").setup({
     config = function()
       require("which-key").setup()
     end,
+  },
+
+  {
+    "folke/trouble.nvim",
+    dependencies = { "nvim-tree/nvim-web-devicons" },
+    opts = {},
   },
 
   {
@@ -400,15 +430,22 @@ vim.keymap.set("n", "<leader>dv", ":DiffviewOpen<CR>")
 vim.keymap.set("n", "<leader>dh", ":DiffviewFileHistory %<CR>")
 vim.keymap.set("n", "<leader>mp", ":MarkdownPreviewToggle<CR>")
 
-vim.keymap.set("n", "gd", vim.lsp.buf.definition)
-vim.keymap.set("n", "<C-b>", vim.lsp.buf.definition)
+vim.keymap.set("n", "gd", "<cmd>Lspsaga goto_definition<CR>", { silent = true })
+vim.keymap.set("n", "<C-b>", "<cmd>Lspsaga goto_definition<CR>", { silent = true })
 vim.keymap.set("n", "gr", fzf.lsp_references)
 vim.keymap.set("n", "<M-F7>", fzf.lsp_references)
-vim.keymap.set("n", "gi", vim.lsp.buf.implementation)
-vim.keymap.set("n", "<C-M-b>", vim.lsp.buf.implementation)
-vim.keymap.set("n", "K", vim.lsp.buf.hover)
+vim.keymap.set("n", "gi", "<cmd>Lspsaga finder imp<CR>", { silent = true })
+vim.keymap.set("n", "<C-M-b>", "<cmd>Lspsaga finder imp<CR>", { silent = true })
+vim.keymap.set("n", "K", "<cmd>Lspsaga hover_doc<CR>", { silent = true })
 vim.keymap.set("n", "<leader>rn", vim.lsp.buf.rename)
-vim.keymap.set("n", "<leader>ca", vim.lsp.buf.code_action)
+vim.keymap.set("n", "<leader>ca", "<cmd>Lspsaga code_action<CR>", { silent = true, desc = "Code actions" })
+vim.keymap.set({ "n", "i" }, "<M-CR>", "<cmd>Lspsaga code_action<CR>", { silent = true, desc = "Quick fixes" })
+vim.keymap.set("n", "<leader>sl", "<cmd>Lspsaga show_line_diagnostics<CR>", { silent = true })
+vim.keymap.set("n", "[d", "<cmd>Lspsaga diagnostic_jump_prev<CR>", { silent = true })
+vim.keymap.set("n", "]d", "<cmd>Lspsaga diagnostic_jump_next<CR>", { silent = true })
+vim.keymap.set("n", "<leader>xx", "<cmd>Trouble diagnostics toggle<CR>", { silent = true, desc = "Diagnostics (Trouble)" })
+vim.keymap.set("n", "<leader>xw", "<cmd>Trouble diagnostics toggle filter.buf=0<CR>", { silent = true, desc = "Buffer diagnostics (Trouble)" })
+vim.keymap.set("n", "<leader>xr", "<cmd>Trouble lsp_references toggle<CR>", { silent = true, desc = "References (Trouble)" })
 vim.keymap.set("n", "<leader>e", ":NvimTreeToggle<CR>")
 vim.keymap.set("n", "<M-l>", ":NvimTreeFindFile<CR>")
 
