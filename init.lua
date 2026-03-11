@@ -421,6 +421,8 @@ end
 vim.keymap.set("n", "<leader>tn", ":tabnew<CR>")
 vim.keymap.set({"n", "t"}, "<leader>tc", close_current_tab)
 vim.keymap.set({"n", "t"}, "<C-F4>", close_current_tab)
+vim.keymap.set({"n", "t"}, "<C-q>", close_current_tab)
+vim.keymap.set({"n", "t"}, "<M-q>", "<cmd>wqa!<CR>")
 vim.keymap.set("n", "<leader>to", ":tabonly<CR>")
 vim.keymap.set("n", "<S-l>", ":tabnext<CR>")
 vim.keymap.set("n", "<S-h>", ":tabprev<CR>")
@@ -435,7 +437,7 @@ vim.keymap.set("n", "<C-h>", "<C-w>h")
 vim.keymap.set("n", "<C-l>", "<C-w>l")
 vim.keymap.set("n", "<C-j>", "<C-w>j")
 vim.keymap.set("n", "<C-k>", "<C-w>k")
-vim.keymap.set("t", "<M-q>", "<C-\\><C-n>")
+vim.keymap.set("t", "<M-Esc>", "<C-\\><C-n>")
 vim.keymap.set("t", "<C-h>", "<C-\\><C-n><C-w>h")
 vim.keymap.set("t", "<C-l>", "<C-\\><C-n><C-w>l")
 vim.keymap.set("t", "<C-j>", "<C-\\><C-n><C-w>j")
@@ -447,10 +449,12 @@ local function find_or_open_terminal(cmd, name)
     local bufname = vim.fn.bufname(bufnr)
     if bufname:match("term://") and bufname:lower():match(cmd:lower()) then
       vim.cmd(i .. "tabnext")
+      vim.cmd("startinsert")
       return
     end
   end
   vim.cmd("tabnew | terminal " .. cmd)
+  vim.cmd("startinsert")
 end
 
 vim.keymap.set({"n", "t"}, "<M-S-t>", function()
@@ -471,15 +475,18 @@ vim.keymap.set({"n", "t"}, "<M-o>", function()
   end
   if #oc_tabs == 0 then
     vim.cmd("tabnew | terminal opencode")
+    vim.cmd("startinsert")
     return
   end
   for _, i in ipairs(oc_tabs) do
     if i > current then
       vim.cmd(i .. "tabnext")
+      vim.cmd("startinsert")
       return
     end
   end
   vim.cmd(oc_tabs[1] .. "tabnext")
+  vim.cmd("startinsert")
 end)
 vim.keymap.set({"n", "t"}, "<M-g>", function()
   find_or_open_terminal("lazygit", "lazygit")
@@ -499,17 +506,20 @@ vim.keymap.set({"n", "t"}, "<M-t>", function()
   end
   if #ps_tabs == 0 then
     vim.cmd("tabnew | terminal")
+    vim.cmd("startinsert")
     return
   end
   -- find next ps tab after current
   for _, i in ipairs(ps_tabs) do
     if i > current then
       vim.cmd(i .. "tabnext")
+      vim.cmd("startinsert")
       return
     end
   end
   -- wrap to first
   vim.cmd(ps_tabs[1] .. "tabnext")
+  vim.cmd("startinsert")
 end)
 
 vim.diagnostic.config({
