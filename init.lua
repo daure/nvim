@@ -104,6 +104,14 @@ require("lazy").setup({
           ignore = false,
           timeout = 400,
         },
+        filesystem_watchers = {
+          ignore_dirs = {
+            "node_modules",
+            "build",
+            "dist",
+          },
+          max_events = 5000,
+        },
         on_attach = function(bufnr)
           local api = require("nvim-tree.api")
           api.config.mappings.default_on_attach(bufnr)
