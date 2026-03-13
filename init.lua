@@ -111,8 +111,9 @@ require("lazy").setup({
             "node_modules",
             "build",
             "dist",
+            ".nuxt",
           },
-          max_events = 5000,
+          max_events = 50000,
         },
         on_attach = function(bufnr)
           local api = require("nvim-tree.api")
@@ -488,6 +489,7 @@ vim.keymap.set({"n", "t"}, "<M-q>", close_current_tab)
 vim.keymap.set("n", "<leader>to", ":tabonly<CR>")
 vim.keymap.set("n", "<S-l>", ":tabnext<CR>")
 vim.keymap.set("n", "<S-h>", ":tabprev<CR>")
+vim.keymap.set({ "n", "i" }, "<C-s>", "<cmd>wall<CR>", { desc = "Save all buffers" })
 vim.keymap.set({ "n", "t" }, "<M-c>", function()
   vim.cmd("tabnext 1")
 end)
