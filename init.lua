@@ -482,7 +482,8 @@ end
 vim.keymap.set("n", "<leader>tn", ":tabnew<CR>")
 vim.keymap.set({"n", "t"}, "<leader>tc", close_current_tab)
 vim.keymap.set({"n", "t"}, "<C-F4>", close_current_tab)
-vim.keymap.set({"n", "t"}, "<C-M-q>", "<cmd>wqa!<CR>")
+vim.keymap.set("n", "<C-M-q>", ":qa!<CR>")
+vim.keymap.set("t", "<C-M-q>", "<C-\\><C-n>:qa!<CR>")
 vim.keymap.set({"n", "t"}, "<M-q>", close_current_tab)
 vim.keymap.set("n", "<leader>to", ":tabonly<CR>")
 vim.keymap.set("n", "<S-l>", ":tabnext<CR>")
@@ -503,6 +504,42 @@ vim.keymap.set("t", "<C-h>", "<C-\\><C-n><C-w>h")
 vim.keymap.set("t", "<C-l>", "<C-\\><C-n><C-w>l")
 vim.keymap.set("t", "<C-j>", "<C-\\><C-n><C-w>j")
 vim.keymap.set("t", "<C-k>", "<C-\\><C-n><C-w>k")
+local function get_tab_order_index(target_type)
+  local last_normal = 0
+  local last_oc = 0
+  local last_lg = 0
+
+  for i = 1, vim.fn.tabpagenr("$") do
+    local bufnr = vim.fn.tabpagebuflist(i)[vim.fn.tabpagewinnr(i)]
+    local bufname = vim.fn.bufname(bufnr)
+    if bufname:match("term://") then
+      local name = bufname:lower()
+      if name:match("opencode") then
+        last_oc = math.max(last_oc, i)
+      elseif name:match("lazygit") then
+        last_lg = math.max(last_lg, i)
+      end
+    else
+      last_normal = math.max(last_normal, i)
+    end
+  end
+
+  if target_type == "opencode" then
+    return math.max(last_normal, last_oc)
+  elseif target_type == "lazygit" then
+    return math.max(last_normal, last_oc, last_lg)
+  elseif target_type == "powershell" then
+    return vim.fn.tabpagenr("$")
+  end
+  return vim.fn.tabpagenr("$")
+end
+
+local function open_ordered_terminal(cmd, term_type)
+  local idx = get_tab_order_index(term_type)
+  vim.cmd(idx .. "tabnew | terminal " .. (cmd or ""))
+  vim.cmd("startinsert")
+end
+
 local function find_or_open_terminal(cmd, name)
   for i = 1, vim.fn.tabpagenr("$") do
     local winnr = vim.fn.tabpagewinnr(i)
@@ -514,15 +551,60 @@ local function find_or_open_terminal(cmd, name)
       return
     end
   end
-  vim.cmd("tabnew | terminal " .. cmd)
-  vim.cmd("startinsert")
+  open_ordered_terminal(cmd, name)
 end
 
-vim.keymap.set({"n", "t"}, "<M-S-t>", function()
-  vim.cmd("tabnew | terminal")
+vim.keymap.set({"n", "t"}, "<M-C-t>", function()
+  open_ordered_terminal("", "powershell")
 end)
+vim.keymap.set({"n", "t"}, "<M-C-o>", function()
+  open_ordered_terminal("opencode", "opencode")
+end)
+
 vim.keymap.set({"n", "t"}, "<M-S-o>", function()
-  vim.cmd("tabnew | terminal opencode")
+  local current = vim.fn.tabpagenr()
+  local oc_tabs = {}
+  for i = 1, vim.fn.tabpagenr("$") do
+    local bufnr = vim.fn.tabpagebuflist(i)[vim.fn.tabpagewinnr(i)]
+    local bufname = vim.fn.bufname(bufnr)
+    if bufname:match("term://") and bufname:lower():match("opencode") then
+      table.insert(oc_tabs, i)
+    end
+  end
+  if #oc_tabs == 0 then return end
+  for i = #oc_tabs, 1, -1 do
+    if oc_tabs[i] < current then
+      vim.cmd(oc_tabs[i] .. "tabnext")
+      vim.cmd("startinsert")
+      return
+    end
+  end
+  vim.cmd(oc_tabs[#oc_tabs] .. "tabnext")
+  vim.cmd("startinsert")
+end)
+
+vim.keymap.set({"n", "t"}, "<M-S-t>", function()
+  local current = vim.fn.tabpagenr()
+  local ps_tabs = {}
+  for i = 1, vim.fn.tabpagenr("$") do
+    local bufnr = vim.fn.tabpagebuflist(i)[vim.fn.tabpagewinnr(i)]
+    local bufname = vim.fn.bufname(bufnr)
+    if bufname:match("term://") and
+       not bufname:lower():match("opencode") and
+       not bufname:lower():match("lazygit") then
+      table.insert(ps_tabs, i)
+    end
+  end
+  if #ps_tabs == 0 then return end
+  for i = #ps_tabs, 1, -1 do
+    if ps_tabs[i] < current then
+      vim.cmd(ps_tabs[i] .. "tabnext")
+      vim.cmd("startinsert")
+      return
+    end
+  end
+  vim.cmd(ps_tabs[#ps_tabs] .. "tabnext")
+  vim.cmd("startinsert")
 end)
 vim.keymap.set({"n", "t"}, "<M-o>", function()
   local current = vim.fn.tabpagenr()
@@ -535,8 +617,7 @@ vim.keymap.set({"n", "t"}, "<M-o>", function()
     end
   end
   if #oc_tabs == 0 then
-    vim.cmd("tabnew | terminal opencode")
-    vim.cmd("startinsert")
+    open_ordered_terminal("opencode", "opencode")
     return
   end
   for _, i in ipairs(oc_tabs) do
@@ -553,7 +634,6 @@ vim.keymap.set({"n", "t"}, "<M-g>", function()
   find_or_open_terminal("lazygit", "lazygit")
 end)
 vim.keymap.set({"n", "t"}, "<M-t>", function()
-  -- collect all terminal tabs that are powershell (no specific command)
   local current = vim.fn.tabpagenr()
   local ps_tabs = {}
   for i = 1, vim.fn.tabpagenr("$") do
@@ -566,11 +646,9 @@ vim.keymap.set({"n", "t"}, "<M-t>", function()
     end
   end
   if #ps_tabs == 0 then
-    vim.cmd("tabnew | terminal")
-    vim.cmd("startinsert")
+    open_ordered_terminal("", "powershell")
     return
   end
-  -- find next ps tab after current
   for _, i in ipairs(ps_tabs) do
     if i > current then
       vim.cmd(i .. "tabnext")
@@ -578,7 +656,6 @@ vim.keymap.set({"n", "t"}, "<M-t>", function()
       return
     end
   end
-  -- wrap to first
   vim.cmd(ps_tabs[1] .. "tabnext")
   vim.cmd("startinsert")
 end)
@@ -594,4 +671,36 @@ vim.diagnostic.config({
 vim.api.nvim_create_autocmd("FocusLost", {
   pattern = "*",
   command = "silent! wa",
+})
+
+vim.api.nvim_create_autocmd("TabEnter", {
+  pattern = "*",
+  callback = function()
+    vim.schedule(function()
+      if vim.bo.buftype == "terminal" then
+        vim.cmd("startinsert")
+      end
+    end)
+  end,
+})
+
+vim.api.nvim_create_autocmd({ "BufEnter", "WinEnter", "TermOpen" }, {
+  pattern = "*",
+  callback = function(args)
+    if vim.bo[args.buf].buftype == "terminal" then
+      local buf = args.buf
+      vim.schedule(function()
+        if vim.api.nvim_get_current_buf() == buf then
+          vim.cmd("startinsert")
+        end
+      end)
+      -- Override left mouse click to instantly enter insert mode without flashing
+      pcall(vim.keymap.set, "n", "<LeftMouse>", "<LeftMouse><Cmd>startinsert<CR>", { buffer = args.buf, silent = true })
+    end
+  end,
+})
+
+vim.api.nvim_create_autocmd("BufLeave", {
+  pattern = "term://*",
+  command = "stopinsert",
 })
