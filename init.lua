@@ -104,7 +104,9 @@ require("lazy").setup({
           ignore = false,
           timeout = 400,
         },
+        auto_reload_on_write = true,
         filesystem_watchers = {
+          enable = true,
           ignore_dirs = {
             "node_modules",
             "build",
