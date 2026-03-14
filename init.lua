@@ -278,7 +278,7 @@ require("lazy").setup({
     end,
   },
 
-  {
+{
     "hrsh7th/nvim-cmp",
     dependencies = {
       "hrsh7th/cmp-nvim-lsp",
@@ -290,6 +290,9 @@ require("lazy").setup({
     config = function()
       local cmp = require("cmp")
       cmp.setup({
+        completion = {
+          autocomplete = { "TextChanged" },
+        },
         formatting = {
           format = require("lspkind").cmp_format({
             mode = "symbol_text",
@@ -303,11 +306,11 @@ require("lazy").setup({
           ["<Tab>"] = cmp.mapping.select_next_item(),
           ["<S-Tab>"] = cmp.mapping.select_prev_item(),
         }),
-        sources = {
+        sources = cmp.config.sources({
           { name = "nvim_lsp" },
           { name = "buffer" },
           { name = "path" },
-        },
+        }),
       })
     end,
   },
@@ -483,8 +486,8 @@ end
 vim.keymap.set("n", "<leader>tn", ":tabnew<CR>")
 vim.keymap.set({"n", "t"}, "<leader>tc", close_current_tab)
 vim.keymap.set({"n", "t"}, "<C-F4>", close_current_tab)
-vim.keymap.set("n", "<C-M-q>", ":qa!<CR>")
-vim.keymap.set("t", "<C-M-q>", "<C-\\><C-n>:qa!<CR>")
+vim.keymap.set({ "n", "v" }, "<C-M-q>", ":qa!<CR>")
+vim.keymap.set("t", "<C-M-q>", "<C-\\><C-n>:qa!<CR>", { silent = true, desc = "Quit all from terminal mode" })
 vim.keymap.set({"n", "t"}, "<M-q>", close_current_tab)
 vim.keymap.set("n", "<leader>to", ":tabonly<CR>")
 vim.keymap.set("n", "<S-l>", ":tabnext<CR>")
