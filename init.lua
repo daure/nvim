@@ -704,34 +704,21 @@ vim.api.nvim_create_autocmd("FocusLost", {
   command = "silent! wa",
 })
 
-vim.api.nvim_create_autocmd("TabEnter", {
+-- Auto-enter insert mode when focusing a terminal buffer
+vim.api.nvim_create_autocmd("FocusGained", {
   pattern = "*",
   callback = function()
     vim.schedule(function()
-      if vim.bo.buftype == "terminal" then
+      if vim.bo.buftype == "terminal" and vim.fn.mode() ~= "t" then
         vim.cmd("startinsert")
       end
     end)
   end,
 })
 
-vim.api.nvim_create_autocmd({ "BufEnter", "WinEnter", "TermOpen" }, {
+vim.api.nvim_create_autocmd("TermOpen", {
   pattern = "*",
-  callback = function(args)
-    if vim.bo[args.buf].buftype == "terminal" then
-      local buf = args.buf
-      vim.schedule(function()
-        if vim.api.nvim_get_current_buf() == buf then
-          vim.cmd("startinsert")
-        end
-      end)
-      -- Override left mouse click to instantly enter insert mode without flashing
-      pcall(vim.keymap.set, "n", "<LeftMouse>", "<LeftMouse><Cmd>startinsert<CR>", { buffer = args.buf, silent = true })
-    end
+  callback = function()
+    vim.cmd("startinsert")
   end,
-})
-
-vim.api.nvim_create_autocmd("BufLeave", {
-  pattern = "term://*",
-  command = "stopinsert",
 })
