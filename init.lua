@@ -371,6 +371,30 @@ require("lazy").setup({
     build = "cd app && npm install",
   },
 
+  {
+    "numToStr/Comment.nvim",
+    opts = {},
+    config = function(_, opts)
+      require("Comment").setup(opts)
+      local api = require("Comment.api")
+
+      -- Normal mode: toggle current line
+      vim.keymap.set("n", "<C-/>", api.toggle.linewise.current, { desc = "Comment toggle line" })
+      vim.keymap.set("n", "<C-_>", api.toggle.linewise.current, { desc = "Comment toggle line" })
+
+      -- Visual mode: toggle selection
+      local esc = vim.api.nvim_replace_termcodes("<ESC>", true, false, true)
+      vim.keymap.set("v", "<C-/>", function()
+        vim.api.nvim_feedkeys(esc, "nx", false)
+        api.toggle.linewise(vim.fn.visualmode())
+      end, { desc = "Comment toggle selection" })
+      vim.keymap.set("v", "<C-_>", function()
+        vim.api.nvim_feedkeys(esc, "nx", false)
+        api.toggle.linewise(vim.fn.visualmode())
+      end, { desc = "Comment toggle selection" })
+    end,
+  },
+
 })
 
 vim.cmd.colorscheme("tokyonight")
