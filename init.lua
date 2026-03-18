@@ -106,6 +106,17 @@ require("lazy").setup({
           ignore = false,
           timeout = 400,
         },
+        auto_reload_on_write = true,
+        filesystem_watchers = {
+          enable = true,
+          ignore_dirs = {
+            "node_modules",
+            "build",
+            "dist",
+            ".nuxt",
+          },
+          max_events = 50000,
+        },
         on_attach = function(bufnr)
           local api = require("nvim-tree.api")
           api.config.mappings.default_on_attach(bufnr)
@@ -269,7 +280,7 @@ require("lazy").setup({
     end,
   },
 
-  {
+{
     "hrsh7th/nvim-cmp",
     dependencies = {
       "hrsh7th/cmp-nvim-lsp",
@@ -281,6 +292,9 @@ require("lazy").setup({
     config = function()
       local cmp = require("cmp")
       cmp.setup({
+        completion = {
+          autocomplete = { "TextChanged" },
+        },
         formatting = {
           format = require("lspkind").cmp_format({
             mode = "symbol_text",
@@ -294,11 +308,11 @@ require("lazy").setup({
           ["<Tab>"] = cmp.mapping.select_next_item(),
           ["<S-Tab>"] = cmp.mapping.select_prev_item(),
         }),
-        sources = {
+        sources = cmp.config.sources({
           { name = "nvim_lsp" },
           { name = "buffer" },
           { name = "path" },
-        },
+        }),
       })
     end,
   },
@@ -359,6 +373,30 @@ require("lazy").setup({
     build = "cd app && npm install",
   },
 
+  {
+    "numToStr/Comment.nvim",
+    opts = {},
+    config = function(_, opts)
+      require("Comment").setup(opts)
+      local api = require("Comment.api")
+
+      -- Normal mode: toggle current line
+      vim.keymap.set("n", "<C-/>", api.toggle.linewise.current, { desc = "Comment toggle line" })
+      vim.keymap.set("n", "<C-_>", api.toggle.linewise.current, { desc = "Comment toggle line" })
+
+      -- Visual mode: toggle selection
+      local esc = vim.api.nvim_replace_termcodes("<ESC>", true, false, true)
+      vim.keymap.set("v", "<C-/>", function()
+        vim.api.nvim_feedkeys(esc, "nx", false)
+        api.toggle.linewise(vim.fn.visualmode())
+      end, { desc = "Comment toggle selection" })
+      vim.keymap.set("v", "<C-_>", function()
+        vim.api.nvim_feedkeys(esc, "nx", false)
+        api.toggle.linewise(vim.fn.visualmode())
+      end, { desc = "Comment toggle selection" })
+    end,
+  },
+
 })
 
 vim.cmd.colorscheme("tokyonight")
@@ -412,12 +450,13 @@ vim.opt.tabline = "%!v:lua.custom_tabline()"
 vim.opt.showtabline = 2
 
 local fzf = require("fzf-lua")
-vim.keymap.set("n", "<leader>ff", fzf.files)
-vim.keymap.set("n", "<leader>fg", fzf.live_grep)
-vim.keymap.set("n", "<leader>fb", fzf.buffers)
+vim.keymap.set("n", "<leader>ff", fzf.files, { desc = "Find files" })
+vim.keymap.set("n", "<leader>fg", fzf.live_grep, { desc = "Live grep" })
+vim.keymap.set("n", "<leader>fb", fzf.buffers, { desc = "Find buffers" })
 vim.keymap.set("n", "<C-e>", fzf.buffers)
-vim.keymap.set("n", "<leader>fh", fzf.help_tags)
-vim.keymap.set("n", "<leader>gs", fzf.git_status)
+vim.keymap.set("n", "<leader>fh", fzf.help_tags, { desc = "Help tags" })
+vim.keymap.set("n", "<leader>fk", fzf.keymaps, { desc = "Search keymaps" })
+vim.keymap.set("n", "<leader>gs", fzf.git_status, { desc = "Git status" })
 vim.keymap.set("n", "<leader>gb", function()
   for _, win in ipairs(vim.api.nvim_list_wins()) do
     local buf = vim.api.nvim_win_get_buf(win)
@@ -427,30 +466,30 @@ vim.keymap.set("n", "<leader>gb", function()
     end
   end
   require("gitsigns").blame()
-end)
+end, { desc = "Git blame toggle" })
 
-vim.keymap.set("n", "<leader>dv", ":DiffviewOpen<CR>")
-vim.keymap.set("n", "<leader>dh", ":DiffviewFileHistory %<CR>")
-vim.keymap.set("n", "<leader>mp", ":MarkdownPreviewToggle<CR>")
+vim.keymap.set("n", "<leader>dv", ":DiffviewOpen<CR>", { desc = "Diff view open" })
+vim.keymap.set("n", "<leader>dh", ":DiffviewFileHistory %<CR>", { desc = "Diff file history" })
+vim.keymap.set("n", "<leader>mp", ":MarkdownPreviewToggle<CR>", { desc = "Markdown preview toggle" })
 
-vim.keymap.set("n", "gd", "<cmd>Lspsaga goto_definition<CR>", { silent = true })
-vim.keymap.set("n", "<C-b>", "<cmd>Lspsaga goto_definition<CR>", { silent = true })
-vim.keymap.set("n", "gr", fzf.lsp_references)
-vim.keymap.set("n", "<M-F7>", fzf.lsp_references)
-vim.keymap.set("n", "gi", "<cmd>Lspsaga finder imp<CR>", { silent = true })
-vim.keymap.set("n", "<C-M-b>", "<cmd>Lspsaga finder imp<CR>", { silent = true })
-vim.keymap.set("n", "K", "<cmd>Lspsaga hover_doc<CR>", { silent = true })
-vim.keymap.set("n", "<leader>rn", vim.lsp.buf.rename)
+vim.keymap.set("n", "gd", "<cmd>Lspsaga goto_definition<CR>", { silent = true, desc = "Go to definition" })
+vim.keymap.set("n", "<C-b>", "<cmd>Lspsaga goto_definition<CR>", { silent = true, desc = "Go to definition" })
+vim.keymap.set("n", "gr", fzf.lsp_references, { desc = "Find references" })
+vim.keymap.set("n", "<M-F7>", fzf.lsp_references, { desc = "Find references" })
+vim.keymap.set("n", "gi", "<cmd>Lspsaga finder imp<CR>", { silent = true, desc = "Find implementations" })
+vim.keymap.set("n", "<C-M-b>", "<cmd>Lspsaga finder imp<CR>", { silent = true, desc = "Find implementations" })
+vim.keymap.set("n", "K", "<cmd>Lspsaga hover_doc<CR>", { silent = true, desc = "Hover documentation" })
+vim.keymap.set("n", "<leader>rn", vim.lsp.buf.rename, { desc = "Rename symbol" })
 vim.keymap.set("n", "<leader>ca", "<cmd>Lspsaga code_action<CR>", { silent = true, desc = "Code actions" })
 vim.keymap.set({ "n", "i" }, "<M-CR>", "<cmd>Lspsaga code_action<CR>", { silent = true, desc = "Quick fixes" })
-vim.keymap.set("n", "<leader>sl", "<cmd>Lspsaga show_line_diagnostics<CR>", { silent = true })
-vim.keymap.set("n", "[d", "<cmd>Lspsaga diagnostic_jump_prev<CR>", { silent = true })
-vim.keymap.set("n", "]d", "<cmd>Lspsaga diagnostic_jump_next<CR>", { silent = true })
+vim.keymap.set("n", "<leader>sl", "<cmd>Lspsaga show_line_diagnostics<CR>", { silent = true, desc = "Show line diagnostics" })
+vim.keymap.set("n", "[d", "<cmd>Lspsaga diagnostic_jump_prev<CR>", { silent = true, desc = "Previous diagnostic" })
+vim.keymap.set("n", "]d", "<cmd>Lspsaga diagnostic_jump_next<CR>", { silent = true, desc = "Next diagnostic" })
 vim.keymap.set("n", "<leader>xx", "<cmd>Trouble diagnostics toggle<CR>", { silent = true, desc = "Diagnostics (Trouble)" })
 vim.keymap.set("n", "<leader>xw", "<cmd>Trouble diagnostics toggle filter.buf=0<CR>", { silent = true, desc = "Buffer diagnostics (Trouble)" })
 vim.keymap.set("n", "<leader>xr", "<cmd>Trouble lsp_references toggle<CR>", { silent = true, desc = "References (Trouble)" })
-vim.keymap.set("n", "<leader>e", ":NvimTreeToggle<CR>")
-vim.keymap.set("n", "<M-l>", ":NvimTreeFindFile<CR>")
+vim.keymap.set("n", "<leader>e", ":NvimTreeToggle<CR>", { desc = "Toggle file tree" })
+vim.keymap.set("n", "<M-l>", ":NvimTreeFindFile<CR>", { desc = "Find file in tree" })
 
 local function close_current_tab()
   local tab = vim.api.nvim_get_current_tabpage()
@@ -472,30 +511,68 @@ local function close_current_tab()
   end
 end
 
-vim.keymap.set("n", "<leader>tn", ":tabnew<CR>")
-vim.keymap.set({"n", "t"}, "<leader>tc", close_current_tab)
-vim.keymap.set({"n", "t"}, "<C-F4>", close_current_tab)
-vim.keymap.set({"n", "t"}, "<C-M-q>", "<cmd>wqa!<CR>")
-vim.keymap.set({"n", "t"}, "<M-q>", close_current_tab)
-vim.keymap.set("n", "<leader>to", ":tabonly<CR>")
-vim.keymap.set("n", "<S-l>", ":tabnext<CR>")
-vim.keymap.set("n", "<S-h>", ":tabprev<CR>")
+vim.keymap.set("n", "<leader>tn", ":tabnew<CR>", { desc = "New tab" })
+vim.keymap.set({"n", "t"}, "<leader>tc", close_current_tab, { desc = "Close tab" })
+vim.keymap.set({"n", "t"}, "<C-F4>", close_current_tab, { desc = "Close tab" })
+vim.keymap.set("n", "<C-M-q>", ":qa!<CR>", { desc = "Quit all" })
+vim.keymap.set("t", "<C-M-q>", "<C-\\><C-n>:qa!<CR>", { silent = true, desc = "Quit all from terminal mode" })
+vim.keymap.set({"n", "t"}, "<M-q>", close_current_tab, { desc = "Close tab" })
+vim.keymap.set("n", "<leader>to", ":tabonly<CR>", { desc = "Close other tabs" })
+vim.keymap.set("n", "<S-l>", ":tabnext<CR>", { desc = "Next tab" })
+vim.keymap.set("n", "<S-h>", ":tabprev<CR>", { desc = "Previous tab" })
+vim.keymap.set({ "n", "i" }, "<C-s>", "<cmd>wall<CR>", { desc = "Save all buffers" })
 vim.keymap.set({ "n", "t" }, "<M-c>", function()
   vim.cmd("tabnext 1")
-end)
+end, { desc = "Go to first tab" })
 
 vim.keymap.set({"n", "i", "t", "v"}, "<F4>", "<CR>")
 vim.keymap.set("n", "<Esc>", "<cmd>nohlsearch<CR><Esc>", { silent = true, desc = "Clear search highlight" })
 
-vim.keymap.set("n", "<C-h>", "<C-w>h")
-vim.keymap.set("n", "<C-l>", "<C-w>l")
-vim.keymap.set("n", "<C-j>", "<C-w>j")
-vim.keymap.set("n", "<C-k>", "<C-w>k")
-vim.keymap.set("t", "<M-Esc>", "<C-\\><C-n>")
-vim.keymap.set("t", "<C-h>", "<C-\\><C-n><C-w>h")
-vim.keymap.set("t", "<C-l>", "<C-\\><C-n><C-w>l")
-vim.keymap.set("t", "<C-j>", "<C-\\><C-n><C-w>j")
-vim.keymap.set("t", "<C-k>", "<C-\\><C-n><C-w>k")
+vim.keymap.set("n", "<C-h>", "<C-w>h", { desc = "Go to left window" })
+vim.keymap.set("n", "<C-l>", "<C-w>l", { desc = "Go to right window" })
+vim.keymap.set("n", "<C-j>", "<C-w>j", { desc = "Go to below window" })
+vim.keymap.set("n", "<C-k>", "<C-w>k", { desc = "Go to above window" })
+vim.keymap.set("t", "<M-Esc>", "<C-\\><C-n>", { desc = "Exit terminal mode" })
+vim.keymap.set("t", "<C-h>", "<C-\\><C-n><C-w>h", { desc = "Go to left window" })
+vim.keymap.set("t", "<C-l>", "<C-\\><C-n><C-w>l", { desc = "Go to right window" })
+vim.keymap.set("t", "<C-j>", "<C-\\><C-n><C-w>j", { desc = "Go to below window" })
+vim.keymap.set("t", "<C-k>", "<C-\\><C-n><C-w>k", { desc = "Go to above window" })
+local function get_tab_order_index(target_type)
+  local last_normal = 0
+  local last_oc = 0
+  local last_lg = 0
+
+  for i = 1, vim.fn.tabpagenr("$") do
+    local bufnr = vim.fn.tabpagebuflist(i)[vim.fn.tabpagewinnr(i)]
+    local bufname = vim.fn.bufname(bufnr)
+    if bufname:match("term://") then
+      local name = bufname:lower()
+      if name:match("opencode") then
+        last_oc = math.max(last_oc, i)
+      elseif name:match("lazygit") then
+        last_lg = math.max(last_lg, i)
+      end
+    else
+      last_normal = math.max(last_normal, i)
+    end
+  end
+
+  if target_type == "opencode" then
+    return math.max(last_normal, last_oc)
+  elseif target_type == "lazygit" then
+    return math.max(last_normal, last_oc, last_lg)
+  elseif target_type == "powershell" then
+    return vim.fn.tabpagenr("$")
+  end
+  return vim.fn.tabpagenr("$")
+end
+
+local function open_ordered_terminal(cmd, term_type)
+  local idx = get_tab_order_index(term_type)
+  vim.cmd(idx .. "tabnew | terminal " .. (cmd or ""))
+  vim.cmd("startinsert")
+end
+
 local function find_or_open_terminal(cmd, name)
   for i = 1, vim.fn.tabpagenr("$") do
     local winnr = vim.fn.tabpagewinnr(i)
@@ -507,16 +584,62 @@ local function find_or_open_terminal(cmd, name)
       return
     end
   end
-  vim.cmd("tabnew | terminal " .. cmd)
-  vim.cmd("startinsert")
+  open_ordered_terminal(cmd, name)
 end
 
-vim.keymap.set({"n", "t"}, "<M-S-t>", function()
-  vim.cmd("tabnew | terminal")
+vim.keymap.set({"n", "t"}, "<M-C-t>", function()
+  open_ordered_terminal("", "powershell")
 end)
+vim.keymap.set({"n", "t"}, "<M-C-o>", function()
+  open_ordered_terminal("opencode", "opencode")
+end)
+
 vim.keymap.set({"n", "t"}, "<M-S-o>", function()
-  vim.cmd("tabnew | terminal opencode")
+  local current = vim.fn.tabpagenr()
+  local oc_tabs = {}
+  for i = 1, vim.fn.tabpagenr("$") do
+    local bufnr = vim.fn.tabpagebuflist(i)[vim.fn.tabpagewinnr(i)]
+    local bufname = vim.fn.bufname(bufnr)
+    if bufname:match("term://") and bufname:lower():match("opencode") then
+      table.insert(oc_tabs, i)
+    end
+  end
+  if #oc_tabs == 0 then return end
+  for i = #oc_tabs, 1, -1 do
+    if oc_tabs[i] < current then
+      vim.cmd(oc_tabs[i] .. "tabnext")
+      vim.cmd("startinsert")
+      return
+    end
+  end
+  vim.cmd(oc_tabs[#oc_tabs] .. "tabnext")
+  vim.cmd("startinsert")
 end)
+
+vim.keymap.set({"n", "t"}, "<M-S-t>", function()
+  local current = vim.fn.tabpagenr()
+  local ps_tabs = {}
+  for i = 1, vim.fn.tabpagenr("$") do
+    local bufnr = vim.fn.tabpagebuflist(i)[vim.fn.tabpagewinnr(i)]
+    local bufname = vim.fn.bufname(bufnr)
+    if bufname:match("term://") and
+       not bufname:lower():match("opencode") and
+       not bufname:lower():match("lazygit") then
+      table.insert(ps_tabs, i)
+    end
+  end
+  if #ps_tabs == 0 then return end
+  for i = #ps_tabs, 1, -1 do
+    if ps_tabs[i] < current then
+      vim.cmd(ps_tabs[i] .. "tabnext")
+      vim.cmd("startinsert")
+      return
+    end
+  end
+  vim.cmd(ps_tabs[#ps_tabs] .. "tabnext")
+  vim.cmd("startinsert")
+end)
+
 vim.keymap.set({"n", "t"}, "<M-o>", function()
   local current = vim.fn.tabpagenr()
   local oc_tabs = {}
@@ -528,8 +651,7 @@ vim.keymap.set({"n", "t"}, "<M-o>", function()
     end
   end
   if #oc_tabs == 0 then
-    vim.cmd("tabnew | terminal opencode")
-    vim.cmd("startinsert")
+    open_ordered_terminal("opencode", "opencode")
     return
   end
   for _, i in ipairs(oc_tabs) do
@@ -546,7 +668,6 @@ vim.keymap.set({"n", "t"}, "<M-g>", function()
   find_or_open_terminal("lazygit", "lazygit")
 end)
 vim.keymap.set({"n", "t"}, "<M-t>", function()
-  -- collect all terminal tabs that are powershell (no specific command)
   local current = vim.fn.tabpagenr()
   local ps_tabs = {}
   for i = 1, vim.fn.tabpagenr("$") do
@@ -559,11 +680,9 @@ vim.keymap.set({"n", "t"}, "<M-t>", function()
     end
   end
   if #ps_tabs == 0 then
-    vim.cmd("tabnew | terminal")
-    vim.cmd("startinsert")
+    open_ordered_terminal("", "powershell")
     return
   end
-  -- find next ps tab after current
   for _, i in ipairs(ps_tabs) do
     if i > current then
       vim.cmd(i .. "tabnext")
@@ -571,7 +690,6 @@ vim.keymap.set({"n", "t"}, "<M-t>", function()
       return
     end
   end
-  -- wrap to first
   vim.cmd(ps_tabs[1] .. "tabnext")
   vim.cmd("startinsert")
 end)
@@ -587,4 +705,23 @@ vim.diagnostic.config({
 vim.api.nvim_create_autocmd("FocusLost", {
   pattern = "*",
   command = "silent! wa",
+})
+
+-- Auto-enter insert mode when focusing a terminal buffer
+vim.api.nvim_create_autocmd("FocusGained", {
+  pattern = "*",
+  callback = function()
+    vim.schedule(function()
+      if vim.bo.buftype == "terminal" and vim.fn.mode() ~= "t" then
+        vim.cmd("startinsert")
+      end
+    end)
+  end,
+})
+
+vim.api.nvim_create_autocmd("TermOpen", {
+  pattern = "*",
+  callback = function()
+    vim.cmd("startinsert")
+  end,
 })
