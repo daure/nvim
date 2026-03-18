@@ -92,9 +92,11 @@ require("lazy").setup({
         renderer = {
           group_empty = true,
           root_folder_label = false,
+          highlight_git = "name",
         },
         filters = {
           dotfiles = false,
+          git_ignored = false,
         },
         update_focused_file = {
           enable = true,
@@ -360,6 +362,7 @@ require("lazy").setup({
 })
 
 vim.cmd.colorscheme("tokyonight")
+vim.api.nvim_set_hl(0, "NvimTreeGitIgnored", { fg = "#565f89" })
 
 vim.api.nvim_create_autocmd("VimEnter", {
   callback = function()
