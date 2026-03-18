@@ -703,7 +703,7 @@ vim.diagnostic.config({
   severity_sort = true,
 })
 
-vim.api.nvim_create_autocmd("FocusLost", {
+vim.api.nvim_create_autocmd({ "FocusLost", "TabLeave" }, {
   pattern = "*",
   command = "silent! wa",
 })
