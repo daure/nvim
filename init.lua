@@ -125,7 +125,7 @@ require("lazy").setup({
 
           local function smart_open()
             local node = api.tree.get_node_under_cursor()
-            if node and node.parent == nil then return end
+            if not node or node.parent == nil then return end
             api.node.open.edit()
           end
           vim.keymap.set("n", "<CR>", smart_open, { buffer = bufnr, noremap = true, silent = true, nowait = true })
@@ -174,9 +174,20 @@ require("lazy").setup({
   },
 
   {
-    'nvim-treesitter/nvim-treesitter',
+    "nvim-treesitter/nvim-treesitter",
+    branch = "master",
     lazy = false,
-    build = ':TSUpdate'
+    build = ":TSUpdate",
+    config = function()
+      local ok, configs = pcall(require, "nvim-treesitter.configs")
+      if ok then
+        configs.setup({
+          ensure_installed = { "typescript", "javascript", "lua", "python", "html", "css", "json", "vue" },
+          sync_install = false,
+          auto_install = true,
+        })
+      end
+    end,
   },
 
   {
@@ -397,6 +408,44 @@ require("lazy").setup({
     end,
   },
 
+  {
+    "nicwest/vim-http",
+    ft = { "http" },
+  },
+
+  {
+    "mistweaverco/kulala.nvim",
+    ft = { "http", "rest" },
+    keys = {
+      { "<leader>Rs", desc = "Send request" },
+      { "<leader>Ra", desc = "Send all requests" },
+      { "<leader>Rb", desc = "Open scratchpad" },
+    },
+    opts = {
+      global_keymaps = true,
+      global_keymaps_prefix = "<leader>R",
+    },
+  },
+
+  {
+    "ThePrimeagen/refactoring.nvim",
+    dependencies = {
+      "nvim-lua/plenary.nvim",
+      "nvim-treesitter/nvim-treesitter",
+    },
+    opts = {},
+    keys = {
+      { "<leader>re", function() return require("refactoring").refactor("Extract Function") end, mode = { "n", "x" }, expr = true, desc = "Extract Function" },
+      { "<leader>rf", function() return require("refactoring").refactor("Extract Function To File") end, mode = { "n", "x" }, expr = true, desc = "Extract Function To File" },
+      { "<leader>rv", function() return require("refactoring").refactor("Extract Variable") end, mode = "x", expr = true, desc = "Extract Variable" },
+      { "<leader>ri", function() return require("refactoring").refactor("Inline Variable") end, mode = { "n", "x" }, expr = true, desc = "Inline Variable" },
+      { "<leader>rI", function() return require("refactoring").refactor("Inline Function") end, mode = "n", expr = true, desc = "Inline Function" },
+      { "<leader>rb", function() return require("refactoring").refactor("Extract Block") end, mode = "n", expr = true, desc = "Extract Block" },
+      { "<leader>rbf", function() return require("refactoring").refactor("Extract Block To File") end, mode = "n", expr = true, desc = "Extract Block To File" },
+      { "<leader>rr", function() require("refactoring").select_refactor() end, mode = { "n", "x" }, desc = "Select Refactor" },
+    },
+  },
+
 })
 
 vim.cmd.colorscheme("tokyonight")
@@ -409,11 +458,25 @@ vim.api.nvim_create_autocmd("VimEnter", {
 })
 
 function _G.custom_tabline()
+  local function get_terminal_name(bufname)
+    local name = bufname:match("//[^:]+:(.+)$") or "terminal"
+    name = name:match("([^/\\]+)$") or name
+    name = name:gsub("%.exe$", ""):gsub("%.cmd$", "")
+    if name:lower():match("opencode") then return "󱙺 OpenCode"
+    elseif name:lower():match("lazygit") then return " LazyGit"
+    elseif name:lower():match("btop") then return "󰄧 Top"
+    elseif name:lower():match("pwsh") or name:lower():match("powershell") then return " PowerShell"
+    end
+    return name
+  end
+
   local s = ""
   for i = 1, vim.fn.tabpagenr("$") do
     local winnr = vim.fn.tabpagewinnr(i)
     local bufnr = vim.fn.tabpagebuflist(i)[winnr]
     local bufname = vim.fn.bufname(bufnr)
+    local buftype = vim.fn.getbufvar(bufnr, "&buftype")
+    local filetype = vim.fn.getbufvar(bufnr, "&filetype")
     local modified = vim.fn.getbufvar(bufnr, "&mod") == 1
 
     s = s .. "%" .. i .. "T"
@@ -427,15 +490,26 @@ function _G.custom_tabline()
         name = tab_cwd
       end
       name = "📁 " .. name
-    elseif bufname:match("term://") then
-      name = bufname:match("//[^:]+:(.+)$") or "terminal"
-      name = name:match("([^/\\]+)$") or name
-      name = name:gsub("%.exe$", ""):gsub("%.cmd$", "")
-      if name:lower():match("opencode") then name = "󱙺 OpenCode"
-      elseif name:lower():match("lazygit") then name = " LazyGit"
-      elseif name:lower():match("btop") then name = "󰄧 Top"
-      elseif name:lower():match("pwsh") or name:lower():match("powershell") then name = " PowerShell"
+    elseif filetype == "fzf" or buftype == "prompt" then
+      -- Find a non-fzf buffer in this tab to show its name
+      name = nil
+      for _, b in ipairs(vim.fn.tabpagebuflist(i)) do
+        local bt = vim.fn.getbufvar(b, "&buftype")
+        local ft = vim.fn.getbufvar(b, "&filetype")
+        local bn = vim.fn.bufname(b)
+        if ft ~= "fzf" and bt ~= "prompt" and ft ~= "nvimtree" and ft ~= "NvimTree" then
+          if bn:match("term://") then
+            name = get_terminal_name(bn)
+            break
+          elseif bn ~= "" then
+            name = vim.fn.fnamemodify(bn, ":t")
+            break
+          end
+        end
       end
+      name = name or ""
+    elseif bufname:match("term://") then
+      name = get_terminal_name(bufname)
     elseif bufname == "" then
       name = "new"
     else
@@ -492,8 +566,45 @@ vim.keymap.set("n", "<leader>xr", "<cmd>Trouble lsp_references toggle<CR>", { si
 vim.keymap.set("n", "<leader>e", ":NvimTreeToggle<CR>", { desc = "Toggle file tree" })
 vim.keymap.set("n", "<M-l>", ":NvimTreeFindFile<CR>", { desc = "Find file in tree" })
 
+vim.keymap.set({ "n", "t" }, "<M-0>", function()
+  -- Exit terminal mode if in it
+  if vim.fn.mode() == "t" then
+    vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<C-\\><C-n>", true, false, true), "n", false)
+  end
+  vim.schedule(function()
+    fzf.files({
+      actions = {
+        ["default"] = function(selected)
+          if not selected or #selected == 0 then return end
+          -- Use fzf-lua's built-in path extractor
+          local entry = fzf.path.entry_to_file(selected[1])
+          local filepath = entry.path
+          vim.schedule(function()
+            vim.api.nvim_set_current_tabpage(1)
+            -- Find file window
+            local file_win = nil
+            for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+              local buf = vim.api.nvim_win_get_buf(win)
+              if vim.bo[buf].filetype ~= "nvimtree" and vim.bo[buf].filetype ~= "NvimTree" then
+                file_win = win
+                break
+              end
+            end
+            if file_win then
+              vim.api.nvim_set_current_win(file_win)
+              vim.cmd("e! " .. vim.fn.fnameescape(filepath))
+            end
+          end)
+        end,
+      },
+    })
+  end)
+end, { desc = "Find file and open in first tab" })
+
 local function close_current_tab()
   local tab = vim.api.nvim_get_current_tabpage()
+  if tab == 1 then return end -- Don't close first tab
+
   local term_bufs = {}
 
   for _, win in ipairs(vim.api.nvim_tabpage_list_wins(tab)) do
@@ -526,6 +637,14 @@ vim.keymap.set("n", "<leader>cr", "<cmd>source $MYVIMRC<CR>", { desc = "Reload n
 vim.keymap.set({ "n", "t" }, "<M-c>", function()
   vim.cmd("tabnext 1")
 end, { desc = "Go to first tab" })
+
+vim.keymap.set({ "n", "t" }, "<M-1>", function()
+  vim.cmd("tabnext 1")
+  vim.schedule(function()
+    -- Focus the second window (file), first is nvim-tree
+    vim.cmd("2wincmd w")
+  end)
+end, { desc = "Go to first tab and focus file" })
 
 vim.keymap.set({"n", "i", "t", "v"}, "<F4>", "<CR>")
 vim.keymap.set("n", "<Esc>", "<cmd>nohlsearch<CR><Esc>", { silent = true, desc = "Clear search highlight" })
@@ -731,9 +850,20 @@ vim.api.nvim_create_autocmd("FocusGained", {
   end,
 })
 
+local vim_started = false
+vim.api.nvim_create_autocmd("VimEnter", {
+  callback = function()
+    vim.defer_fn(function()
+      vim_started = true
+    end, 100)
+  end,
+})
+
 vim.api.nvim_create_autocmd("TermOpen", {
   pattern = "*",
   callback = function()
-    vim.cmd("startinsert")
+    if vim_started then
+      vim.cmd("startinsert")
+    end
   end,
 })
