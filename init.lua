@@ -146,6 +146,10 @@ require("lazy").setup({
           },
         },
         keymap = {
+          fzf = {
+            ["alt-j"] = "down",
+            ["alt-k"] = "up",
+          },
           builtin = {
             ["<C-u>"] = "preview-page-up",
             ["<C-d>"] = "preview-page-down",
