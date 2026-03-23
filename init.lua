@@ -703,12 +703,12 @@ local function get_tab_order_index(target_type)
 
   if target_type == "opencode" then
     return math.max(last_normal, last_oc)
-  elseif target_type == "lazygit" then
-    return math.max(last_normal, last_oc, last_lg)
   elseif target_type == "mprocs" then
-    return math.max(last_normal, last_oc, last_lg, last_mp)
+    return math.max(last_normal, last_oc, last_mp)
+  elseif target_type == "lazygit" then
+    return math.max(last_normal, last_oc, last_mp, last_lg)
   elseif target_type == "btop" then
-    return math.max(last_normal, last_oc, last_lg, last_mp, last_bt)
+    return math.max(last_normal, last_oc, last_mp, last_lg, last_bt)
   elseif target_type == "powershell" then
     return vim.fn.tabpagenr("$")
   end
