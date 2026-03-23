@@ -469,14 +469,14 @@ vim.api.nvim_create_autocmd("VimEnter", {
 
 function _G.custom_tabline()
   local function get_terminal_name(bufname)
-    local name = bufname:match("//[^:]+:(.+)$") or "terminal"
+    local name = bufname:match("//[^:]+:(.+)$") or " terminal"
     name = name:match("([^/\\]+)$") or name
     name = name:gsub("%.exe$", ""):gsub("%.cmd$", "")
-    if name:lower():match("opencode") then return "󱙺 OpenCode"
-    elseif name:lower():match("lazygit") then return " LazyGit"
+    if name:lower():match("opencode") then return "󱙺 Chat"
+    elseif name:lower():match("lazygit") then return " Git"
     elseif name:lower():match("btop") then return "󰄧 Top"
-    elseif name:lower():match("mprocs") then return " MProcs"
-    elseif name:lower():match("pwsh") or name:lower():match("powershell") then return " PowerShell"
+    elseif name:lower():match("mprocs") then return " Procs"
+    elseif name:lower():match("pwsh") or name:lower():match("powershell") then return " Shell"
     end
     return name
   end
@@ -500,7 +500,7 @@ function _G.custom_tabline()
       if name == "" then
         name = tab_cwd
       end
-      name = "📁 " .. name
+      name = " " .. name
     elseif filetype == "fzf" or buftype == "prompt" then
       -- Find a non-fzf buffer in this tab to show its name
       name = nil
@@ -575,7 +575,15 @@ vim.keymap.set("n", "<leader>xx", "<cmd>Trouble diagnostics toggle<CR>", { silen
 vim.keymap.set("n", "<leader>xw", "<cmd>Trouble diagnostics toggle filter.buf=0<CR>", { silent = true, desc = "Buffer diagnostics (Trouble)" })
 vim.keymap.set("n", "<leader>xr", "<cmd>Trouble lsp_references toggle<CR>", { silent = true, desc = "References (Trouble)" })
 vim.keymap.set("n", "<leader>e", ":NvimTreeToggle<CR>", { desc = "Toggle file tree" })
-vim.keymap.set("n", "<M-l>", ":NvimTreeFindFile<CR>", { desc = "Find file in tree" })
+vim.keymap.set({ "n", "t" }, "<M-c>", function()
+  if vim.fn.mode() == "t" then
+    vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<C-\\><C-n>", true, false, true), "n", false)
+  end
+  vim.schedule(function()
+    vim.cmd("tabnext 1")
+    vim.cmd("NvimTreeFindFile")
+  end)
+end, { desc = "Go to first tab and find file in tree" })
 
 vim.keymap.set({ "n", "t" }, "<M-0>", function()
   -- Exit terminal mode if in it
@@ -645,9 +653,7 @@ vim.keymap.set("n", "<S-l>", ":tabnext<CR>", { desc = "Next tab" })
 vim.keymap.set("n", "<S-h>", ":tabprev<CR>", { desc = "Previous tab" })
 vim.keymap.set({ "n", "i" }, "<C-s>", "<cmd>wall<CR>", { desc = "Save all buffers" })
 vim.keymap.set("n", "<leader>cr", "<cmd>source $MYVIMRC<CR>", { desc = "Reload nvim config" })
-vim.keymap.set({ "n", "t" }, "<M-c>", function()
-  vim.cmd("tabnext 1")
-end, { desc = "Go to first tab" })
+
 
 vim.keymap.set({ "n", "t" }, "<M-1>", function()
   vim.cmd("tabnext 1")
@@ -697,12 +703,12 @@ local function get_tab_order_index(target_type)
 
   if target_type == "opencode" then
     return math.max(last_normal, last_oc)
-  elseif target_type == "mprocs" then
-    return math.max(last_normal, last_oc, last_mp)
   elseif target_type == "lazygit" then
-    return math.max(last_normal, last_oc, last_mp, last_lg)
+    return math.max(last_normal, last_oc, last_lg)
+  elseif target_type == "mprocs" then
+    return math.max(last_normal, last_oc, last_lg, last_mp)
   elseif target_type == "btop" then
-    return math.max(last_normal, last_oc, last_mp, last_lg, last_bt)
+    return math.max(last_normal, last_oc, last_lg, last_mp, last_bt)
   elseif target_type == "powershell" then
     return vim.fn.tabpagenr("$")
   end
@@ -808,13 +814,13 @@ vim.keymap.set({"n", "t"}, "<M-S-t>", function()
   vim.cmd(oc_tabs[1] .. "tabnext")
   vim.cmd("startinsert")
 end)
-vim.keymap.set({"n", "t"}, "<M-g>", function()
+vim.keymap.set({"n", "t"}, "<M-9>", function()
   find_or_open_terminal("lazygit", "lazygit")
 end)
 vim.keymap.set({"n", "t"}, "<M-b>", function()
   find_or_open_terminal("btop", "btop")
 end)
-vim.keymap.set({"n", "t"}, "<M-p>", function()
+vim.keymap.set({"n", "t"}, "<M-8>", function()
   find_or_open_terminal("mprocs", "mprocs")
 end)
 vim.keymap.set({"n", "t"}, "<M-t>", function()
