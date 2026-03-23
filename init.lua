@@ -475,6 +475,7 @@ function _G.custom_tabline()
     if name:lower():match("opencode") then return "󱙺 OpenCode"
     elseif name:lower():match("lazygit") then return " LazyGit"
     elseif name:lower():match("btop") then return "󰄧 Top"
+    elseif name:lower():match("mprocs") then return " MProcs"
     elseif name:lower():match("pwsh") or name:lower():match("powershell") then return " PowerShell"
     end
     return name
@@ -673,6 +674,7 @@ local function get_tab_order_index(target_type)
   local last_oc = 0
   local last_lg = 0
   local last_bt = 0
+  local last_mp = 0
 
   for i = 1, vim.fn.tabpagenr("$") do
     local bufnr = vim.fn.tabpagebuflist(i)[vim.fn.tabpagewinnr(i)]
@@ -685,6 +687,8 @@ local function get_tab_order_index(target_type)
         last_lg = math.max(last_lg, i)
       elseif name:match("btop") then
         last_bt = math.max(last_bt, i)
+      elseif name:match("mprocs") then
+        last_mp = math.max(last_mp, i)
       end
     else
       last_normal = math.max(last_normal, i)
@@ -693,10 +697,12 @@ local function get_tab_order_index(target_type)
 
   if target_type == "opencode" then
     return math.max(last_normal, last_oc)
+  elseif target_type == "mprocs" then
+    return math.max(last_normal, last_oc, last_mp)
   elseif target_type == "lazygit" then
-    return math.max(last_normal, last_oc, last_lg)
+    return math.max(last_normal, last_oc, last_mp, last_lg)
   elseif target_type == "btop" then
-    return math.max(last_normal, last_oc, last_lg, last_bt)
+    return math.max(last_normal, last_oc, last_mp, last_lg, last_bt)
   elseif target_type == "powershell" then
     return vim.fn.tabpagenr("$")
   end
@@ -758,26 +764,27 @@ vim.keymap.set({"n", "t"}, "<M-S-t>", function()
   for i = 1, vim.fn.tabpagenr("$") do
     local bufnr = vim.fn.tabpagebuflist(i)[vim.fn.tabpagewinnr(i)]
     local bufname = vim.fn.bufname(bufnr)
-    if bufname:match("term://") and
+      if bufname:match("term://") and
        not bufname:lower():match("opencode") and
        not bufname:lower():match("lazygit") and
-       not bufname:lower():match("btop") then
-      table.insert(ps_tabs, i)
+       not bufname:lower():match("btop") and
+       not bufname:lower():match("mprocs") then
+        table.insert(ps_tabs, i)
+      end
     end
-  end
-  if #ps_tabs == 0 then return end
-  for i = #ps_tabs, 1, -1 do
-    if ps_tabs[i] < current then
-      vim.cmd(ps_tabs[i] .. "tabnext")
-      vim.cmd("startinsert")
-      return
+    if #ps_tabs == 0 then return end
+    for i = #ps_tabs, 1, -1 do
+      if ps_tabs[i] < current then
+        vim.cmd(ps_tabs[i] .. "tabnext")
+        vim.cmd("startinsert")
+        return
+      end
     end
-  end
-  vim.cmd(ps_tabs[#ps_tabs] .. "tabnext")
-  vim.cmd("startinsert")
-end)
+    vim.cmd(ps_tabs[#ps_tabs] .. "tabnext")
+    vim.cmd("startinsert")
+  end)
 
-vim.keymap.set({"n", "t"}, "<M-o>", function()
+  vim.keymap.set({"n", "t"}, "<M-o>", function()
   local current = vim.fn.tabpagenr()
   local oc_tabs = {}
   for i = 1, vim.fn.tabpagenr("$") do
@@ -807,6 +814,9 @@ end)
 vim.keymap.set({"n", "t"}, "<M-b>", function()
   find_or_open_terminal("btop", "btop")
 end)
+vim.keymap.set({"n", "t"}, "<M-p>", function()
+  find_or_open_terminal("mprocs", "mprocs")
+end)
 vim.keymap.set({"n", "t"}, "<M-t>", function()
   local current = vim.fn.tabpagenr()
   local ps_tabs = {}
@@ -816,7 +826,8 @@ vim.keymap.set({"n", "t"}, "<M-t>", function()
     if bufname:match("term://") and
        not bufname:lower():match("opencode") and
        not bufname:lower():match("lazygit") and
-       not bufname:lower():match("btop") then
+       not bufname:lower():match("btop") and
+       not bufname:lower():match("mprocs") then
       table.insert(ps_tabs, i)
     end
   end
