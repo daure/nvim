@@ -237,6 +237,7 @@ require("lazy").setup({
     config = function()
       require("mason-lspconfig").setup({
         ensure_installed = { "lua_ls", "pyright", "ts_ls", "angularls", "html", "cssls", "tailwindcss", "vue_ls" },
+        automatic_enable = false,
       })
 
       -- Volar v3: wire ts_ls as the TypeScript backend for vue_ls
@@ -266,6 +267,11 @@ require("lazy").setup({
             )
           end
         end,
+      })
+
+      -- Angular: only handle templates, let ts_ls handle TypeScript
+      vim.lsp.config("angularls", {
+        filetypes = { "html", "htmlangular" },
       })
 
       vim.lsp.enable("lua_ls")
