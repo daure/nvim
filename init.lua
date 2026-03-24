@@ -475,7 +475,7 @@ function _G.custom_tabline()
     if name:lower():match("opencode") then return "󱙺 Chat"
     elseif name:lower():match("lazygit") then return "\u{e702} Git"
     elseif name:lower():match("btop") then return "󰄧 Top"
-    elseif name:lower():match("mprocs") then return "\u{eb6e} Procs"
+    elseif name:lower():match("mprocs") then return "\u{eba2} Procs"
     elseif name:lower():match("pwsh") or name:lower():match("powershell") or name:lower():match("^nu") then return "\u{f489} Term"
     end
     return name
