@@ -90,7 +90,7 @@ require("lazy").setup({
           preserve_window_proportions = true,
         },
         renderer = {
-          group_empty = true,
+          group_empty = false,
           root_folder_label = false,
           highlight_git = "name",
         },
@@ -99,14 +99,14 @@ require("lazy").setup({
           git_ignored = false,
         },
         update_focused_file = {
-          enable = true,
+          enable = false,
         },
         git = {
           enable = true,
           ignore = false,
           timeout = 400,
         },
-        auto_reload_on_write = true,
+        auto_reload_on_write = false,
         filesystem_watchers = {
           enable = true,
           ignore_dirs = {
@@ -473,10 +473,10 @@ function _G.custom_tabline()
     name = name:match("([^/\\]+)$") or name
     name = name:gsub("%.exe$", ""):gsub("%.cmd$", "")
     if name:lower():match("opencode") then return "󱙺 Chat"
-    elseif name:lower():match("lazygit") then return " Git"
+    elseif name:lower():match("lazygit") then return "\u{e702} Git"
     elseif name:lower():match("btop") then return "󰄧 Top"
-    elseif name:lower():match("mprocs") then return " Procs"
-    elseif name:lower():match("pwsh") or name:lower():match("powershell") then return " Shell"
+    elseif name:lower():match("mprocs") then return "\u{eb6e} Procs"
+    elseif name:lower():match("pwsh") or name:lower():match("powershell") or name:lower():match("^nu") then return "\u{f489} Term"
     end
     return name
   end
@@ -580,10 +580,34 @@ vim.keymap.set({ "n", "t" }, "<M-c>", function()
     vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<C-\\><C-n>", true, false, true), "n", false)
   end
   vim.schedule(function()
-    vim.cmd("tabnext 1")
-    vim.cmd("NvimTreeFindFile")
+    local current = vim.fn.tabpagenr()
+    local oc_tabs = {}
+    for i = 1, vim.fn.tabpagenr("$") do
+      local bufnr = vim.fn.tabpagebuflist(i)[vim.fn.tabpagewinnr(i)]
+      local bufname = vim.fn.bufname(bufnr)
+      if bufname:match("term://") and bufname:lower():match("opencode") then
+        table.insert(oc_tabs, i)
+      end
+    end
+    if #oc_tabs == 0 then
+      open_ordered_terminal("opencode", "opencode")
+      return
+    end
+    for _, i in ipairs(oc_tabs) do
+      if i > current then
+        vim.cmd(i .. "tabnext")
+        vim.cmd("startinsert")
+        return
+      end
+    end
+    vim.cmd(oc_tabs[1] .. "tabnext")
+    vim.cmd("startinsert")
   end)
-end, { desc = "Go to first tab and find file in tree" })
+end, { desc = "Go to opencode" })
+
+vim.keymap.set("n", "<M-l>", function()
+  require("nvim-tree.api").tree.find_file({ open = true, focus = true })
+end, { desc = "Find file in tree" })
 
 vim.keymap.set({ "n", "t" }, "<M-0>", function()
   -- Exit terminal mode if in it
@@ -657,11 +681,7 @@ vim.keymap.set("n", "<leader>cr", "<cmd>source $MYVIMRC<CR>", { desc = "Reload n
 
 vim.keymap.set({ "n", "t" }, "<M-1>", function()
   vim.cmd("tabnext 1")
-  vim.schedule(function()
-    -- Focus the second window (file), first is nvim-tree
-    vim.cmd("2wincmd w")
-  end)
-end, { desc = "Go to first tab and focus file" })
+end, { desc = "Go to first tab" })
 
 vim.keymap.set({"n", "i", "t", "v"}, "<F4>", "<CR>")
 vim.keymap.set("n", "<Esc>", "<cmd>nohlsearch<CR><Esc>", { silent = true, desc = "Clear search highlight" })
@@ -738,11 +758,11 @@ end
 vim.keymap.set({"n", "t"}, "<M-C-t>", function()
   open_ordered_terminal("", "powershell")
 end)
-vim.keymap.set({"n", "t"}, "<M-C-o>", function()
+vim.keymap.set({"n", "t"}, "<M-C-c>", function()
   open_ordered_terminal("opencode", "opencode")
 end)
 
-vim.keymap.set({"n", "t"}, "<M-S-o>", function()
+vim.keymap.set({"n", "t"}, "<M-S-c>", function()
   local current = vim.fn.tabpagenr()
   local oc_tabs = {}
   for i = 1, vim.fn.tabpagenr("$") do
@@ -790,7 +810,7 @@ vim.keymap.set({"n", "t"}, "<M-S-t>", function()
     vim.cmd("startinsert")
   end)
 
-  vim.keymap.set({"n", "t"}, "<M-o>", function()
+  vim.keymap.set({"n", "t"}, "<M-c>", function()
   local current = vim.fn.tabpagenr()
   local oc_tabs = {}
   for i = 1, vim.fn.tabpagenr("$") do
@@ -889,6 +909,8 @@ vim.api.nvim_create_autocmd("VimEnter", {
 vim.api.nvim_create_autocmd("TermOpen", {
   pattern = "*",
   callback = function()
+    vim.wo.number = false
+    vim.wo.relativenumber = false
     if vim_started then
       vim.cmd("startinsert")
     end
