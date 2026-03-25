@@ -908,11 +908,23 @@ vim.api.nvim_create_autocmd("VimEnter", {
 
 vim.api.nvim_create_autocmd("TermOpen", {
   pattern = "*",
-  callback = function()
-    vim.wo.number = false
-    vim.wo.relativenumber = false
+  callback = function(args)
+    local win = vim.fn.bufwinid(args.buf)
+    if win ~= -1 then
+      vim.wo[win].number = false
+      vim.wo[win].relativenumber = false
+    end
     if vim_started then
       vim.cmd("startinsert")
+    end
+  end,
+})
+
+vim.api.nvim_create_autocmd("BufEnter", {
+  callback = function()
+    if vim.bo.buftype == "terminal" then
+      vim.wo.number = false
+      vim.wo.relativenumber = false
     end
   end,
 })
