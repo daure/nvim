@@ -606,8 +606,17 @@ vim.keymap.set({ "n", "t" }, "<M-c>", function()
 end, { desc = "Go to opencode" })
 
 vim.keymap.set("n", "<M-l>", function()
-  require("nvim-tree.api").tree.find_file({ open = true, focus = true })
-end, { desc = "Find file in tree" })
+  local api = require("nvim-tree.api")
+  local buf = vim.api.nvim_get_current_buf()
+  if vim.bo[buf].filetype == "NvimTree" then
+    local node = api.tree.get_node_under_cursor()
+    if node and node.type == "file" then
+      api.node.open.edit()
+    end
+  else
+    api.tree.find_file({ open = true, focus = true })
+  end
+end, { desc = "Find file in tree / open file from tree" })
 
 vim.keymap.set({ "n", "t" }, "<M-0>", function()
   -- Exit terminal mode if in it
@@ -679,7 +688,7 @@ vim.keymap.set({ "n", "i" }, "<C-s>", "<cmd>wall<CR>", { desc = "Save all buffer
 vim.keymap.set("n", "<leader>cr", "<cmd>source $MYVIMRC<CR>", { desc = "Reload nvim config" })
 
 
-vim.keymap.set({ "n", "t" }, "<M-1>", function()
+vim.keymap.set({ "n", "t" }, "<M-f>", function()
   vim.cmd("tabnext 1")
 end, { desc = "Go to first tab" })
 
